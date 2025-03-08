@@ -69,7 +69,8 @@ fun MainUI() {
     // mutableStateListOf로 상태를 관리하여 리스트가 변경될 때 UI가 갱신되도록 수정
     //val chipList = remember { mutableStateListOf("Chip 1", "ChipChip 2", "ChipChipChip 3") }
     val chipList = remember { mutableStateListOf<String>() }
-    val itemList by remember { mutableStateOf((1..10).map { "Item $it" }) }
+    //val itemList by remember { mutableStateOf((1..10).map { "Item $it" }) }
+    val itemList = remember { mutableStateListOf<String>() }
 
     Scaffold(
         topBar = {
