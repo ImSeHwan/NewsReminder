@@ -1,8 +1,10 @@
 package com.junseo.newsreminder
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -29,48 +31,54 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.junseo.newsreminder.dialog.InputDialog
 import com.junseo.newsreminder.ui.theme.NewsReminderTheme
+import com.junseo.newsreminder.viewmodel.NewsItemViewModel
+
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: NewsItemViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
+            //val viewModel: NewsItemViewModel = viewModel()
+
             NewsReminderTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainUI()
+                    MainUI(viewModel)
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun Preview() {
-    NewsReminderTheme {
-        MainUI()
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainUI() {
+fun MainUI(viewModel: NewsItemViewModel) {
     // mutableStateListOf로 상태를 관리하여 리스트가 변경될 때 UI가 갱신되도록 수정
-    //val chipList = remember { mutableStateListOf("Chip 1", "ChipChip 2", "ChipChipChip 3") }
+    val newsData by viewModel.data.collectAsState()
+
     val chipList = remember { mutableStateListOf<String>() }
-    //val itemList by remember { mutableStateOf((1..10).map { "Item $it" }) }
     val itemList = remember { mutableStateListOf<String>() }
+
+    val showDialog = remember { mutableStateOf(false) }
+    val inputText = remember { mutableStateOf("") }
+
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -80,7 +88,7 @@ fun MainUI() {
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                chipList.add("Chip ${chipList.size + 1}")
+                showDialog.value = true // 다이얼로그 표시
             }) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "탭 추가")
             }
@@ -97,6 +105,25 @@ fun MainUI() {
             // 리스트뷰
             ItemList(itemList)
         }
+    }
+
+    // 다이얼로그 표시
+    if (showDialog.value) {
+        InputDialog.Show(
+            initialValue = inputText.value,
+            onConfirm = { newValue ->
+                if(newValue.isBlank()) {
+                    Toast.makeText(context, "키워드를 입력해주세요.", Toast.LENGTH_SHORT).show()
+                } else {
+                    chipList.add(newValue) // 입력한 값 추가
+                    showDialog.value = false // 다이얼로그 닫기
+                    viewModel.fetchData(newValue)
+                }
+            },
+            onDismiss = {
+                showDialog.value = false // 다이얼로그 닫기
+            }
+        )
     }
 }
 
@@ -151,5 +178,15 @@ fun ListItem(text: String) {
             modifier = Modifier.padding(16.dp),
             style = MaterialTheme.typography.bodyLarge
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun Preview() {
+    val mockViewModel = NewsItemViewModel() // ✅ 직접 ViewModel 인스턴스 생성
+
+    NewsReminderTheme {
+        MainUI(viewModel = mockViewModel)
     }
 }
