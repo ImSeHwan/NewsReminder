@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -31,12 +32,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -71,6 +75,8 @@ class MainActivity : ComponentActivity() {
 fun MainUI(viewModel: NewsItemViewModel) {
     // mutableStateListOf로 상태를 관리하여 리스트가 변경될 때 UI가 갱신되도록 수정
     val newsData by viewModel.data.collectAsState()
+    //var newValue by remember { mutableStateOf<String?>(null) }
+
 
     val chipList = remember { mutableStateListOf<String>() }
     val itemList = remember { mutableStateListOf<String>() }
@@ -96,9 +102,7 @@ fun MainUI(viewModel: NewsItemViewModel) {
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             // Chip 그룹
-            ChipGroup(chipList) { chip ->
-                chipList.remove(chip)
-            }
+            ChipGroup(chipList = chipList, onRemove = { chip -> chipList.remove(chip) })
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -131,6 +135,9 @@ fun MainUI(viewModel: NewsItemViewModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChipGroup(chipList: List<String>, onRemove: (String) -> Unit) {
+
+    var selectedChip by remember { mutableStateOf<String?>(null) }
+
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -141,14 +148,17 @@ fun ChipGroup(chipList: List<String>, onRemove: (String) -> Unit) {
     ) {
         chipList.forEach { chip ->
             AssistChip(
-                onClick = { /* 클릭 이벤트 */ },
+                onClick = { selectedChip = if (selectedChip == chip) null else chip },
                 modifier = Modifier.height(32.dp),
                 label = { Text(chip) },
                 trailingIcon = {
                     IconButton(onClick = { onRemove(chip) }) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = "삭제")
                     }
-                }
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (selectedChip == chip) Color.Blue else Color.LightGray
+                )
             )
         }
     }
