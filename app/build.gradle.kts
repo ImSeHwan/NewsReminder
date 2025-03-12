@@ -7,6 +7,10 @@ android {
     namespace = "com.junseo.newsreminder"
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.junseo.newsreminder"
         minSdk = 24
@@ -23,10 +27,19 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            buildConfigField ("boolean", "LOG", "false")
+            buildConfigField ("boolean", "LOGFILE", "false")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        debug {
+            // 로그설정을 비활성화 하려면 false로 변경
+            buildConfigField ("boolean", "LOG", "true")
+            buildConfigField ("boolean", "LOGFILE", "true")
+            isDebuggable = true
         }
     }
     compileOptions {
@@ -69,4 +82,8 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0") // JSON 변환용 (Gson)
+
+    // log4j
+    implementation("log4j:log4j:1.2.17")
+    implementation("de.mindpipe.android:android-logging-log4j:1.0.3")
 }
