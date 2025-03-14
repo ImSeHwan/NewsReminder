@@ -53,7 +53,7 @@ import com.msinfotech.delivery.utils.prefs.SimplePrefs
 
 
 class MainActivity : ComponentActivity() {
-    private val newsItemViewModel: NewsItemViewModel by viewModels()
+    //private val newsItemViewModel: NewsItemViewModel by viewModels()
     private val chipsItemViewModel: ChipsItemViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainUI(/*newsItemViewModel, chipsItemViewModel*/)
+                    MainUI(chipsItemViewModel)
                 }
             }
         }
@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainUI(/*viewModel: NewsItemViewModel*/) {
+fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewModel = NewsItemViewModel()) {
     // mutableStateListOf로 상태를 관리하여 리스트가 변경될 때 UI가 갱신되도록 수정
     //val newsData by viewModel.data.collectAsState()
     //var newValue by remember { mutableStateOf<String?>(null) }
@@ -118,8 +118,10 @@ fun MainUI(/*viewModel: NewsItemViewModel*/) {
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             // Chip 그룹
-            //ChipGroup(chipList = chipList, onRemove = { chip -> chipList.remove(chip) })
-            ChipGroup(viewModel = chips, onRemove = )
+            ChipGroup(viewModel = chipsViewModel, onRemove = { chip ->
+                chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.filter { it.first != chip }
+            })
+            //ChipGroup(viewModel = chips, onRemove = )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -137,8 +139,9 @@ fun MainUI(/*viewModel: NewsItemViewModel*/) {
                     Toast.makeText(context, "키워드를 입력해주세요.", Toast.LENGTH_SHORT).show()
                 } else {
                     //chipList.add(newValue) // 입력한 값 추가
+                    chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.plus(Pair(newValue, true))
                     showDialog.value = false // 다이얼로그 닫기
-                    viewModel.fetchData(newValue)
+                    newsItemViewModel.fetchData(newValue)
                 }
             },
             onDismiss = {
@@ -178,21 +181,6 @@ fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
                 )
             )
         }
-/*        chipList.forEach { chip ->
-            AssistChip(
-                onClick = { selectedChip = if (selectedChip == chip) null else chip },
-                modifier = Modifier.height(32.dp),
-                label = { Text(chip) },
-                trailingIcon = {
-                    IconButton(onClick = { onRemove(chip) }) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "삭제")
-                    }
-                },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (selectedChip == chip) Color.Blue else Color.LightGray
-                )
-            )
-        }*/
     }
 }
 
@@ -229,6 +217,6 @@ fun Preview() {
     val mockViewModel = NewsItemViewModel() // ✅ 직접 ViewModel 인스턴스 생성
 
     NewsReminderTheme {
-        MainUI(viewModel = mockViewModel)
+        //MainUI(viewModel = mockViewModel)
     }
 }
