@@ -2,6 +2,7 @@ package com.msinfotech.delivery.utils.prefs
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.json.JSONArray
 
 open class SimplePrefs(context: Context, name: String) {
 
@@ -31,6 +32,19 @@ open class SimplePrefs(context: Context, name: String) {
 
     fun get(key: String, defValue: Boolean): Boolean {
         return mPrefs.getBoolean(key, defValue)
+    }
+
+    /// json array로 저장된 리스트를 가져온다.
+    fun getList(key: String): List<String> {
+        val jsonString = mPrefs.getString(key, "[]") ?: "[]"
+        val jsonArray = JSONArray(jsonString)
+        return List(jsonArray.length()) { jsonArray.getString(it) }
+    }
+
+    /// json array로 리스트를 저장한다.
+    fun setList(key: String, value: List<String>) {
+        val jsonArray = JSONArray(value)
+        mEditor.putString(key, jsonArray.toString()).apply()
     }
 
     fun set(key: String, value: String) {

@@ -44,16 +44,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.junseo.newsreminder.common.CommonInfo
 import com.junseo.newsreminder.dialog.InputDialog
 import com.junseo.newsreminder.ui.theme.NewsReminderTheme
+import com.junseo.newsreminder.viewmodel.ChipsItemViewModel
 import com.junseo.newsreminder.viewmodel.NewsItemViewModel
+import com.msinfotech.delivery.utils.prefs.SimplePrefs
 
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: NewsItemViewModel by viewModels()
+    private val newsItemViewModel: NewsItemViewModel by viewModels()
+    private val chipsItemViewModel: ChipsItemViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val savedData = JSApplication.INSTANCE.simplePrefs.getList(CommonInfo.PREF_SEARCH_LIST_KEY)
+        chipsItemViewModel.loadChipInfoFromPreferences(savedData)
 
         setContent {
             //val viewModel: NewsItemViewModel = viewModel()
@@ -63,28 +70,37 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainUI(viewModel)
+                    MainUI(/*newsItemViewModel, chipsItemViewModel*/)
                 }
             }
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        JSApplication.INSTANCE.simplePrefs.setList(
+            CommonInfo.PREF_SEARCH_LIST_KEY,
+            chipsItemViewModel.chipInfoList?.map { "${it.first},${it.second}" } ?: emptyList()
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainUI(viewModel: NewsItemViewModel) {
+fun MainUI(/*viewModel: NewsItemViewModel*/) {
     // mutableStateListOf로 상태를 관리하여 리스트가 변경될 때 UI가 갱신되도록 수정
-    val newsData by viewModel.data.collectAsState()
+    //val newsData by viewModel.data.collectAsState()
     //var newValue by remember { mutableStateOf<String?>(null) }
 
 
-    val chipList = remember { mutableStateListOf<String>() }
+    //val chipList = remember { mutableStateListOf<String>() }
     val itemList = remember { mutableStateListOf<String>() }
 
     val showDialog = remember { mutableStateOf(false) }
     val inputText = remember { mutableStateOf("") }
 
-    val context = LocalContext.current
+    val context = JSApplication.INSTANCE.applicationContext
 
     Scaffold(
         topBar = {
@@ -102,7 +118,8 @@ fun MainUI(viewModel: NewsItemViewModel) {
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             // Chip 그룹
-            ChipGroup(chipList = chipList, onRemove = { chip -> chipList.remove(chip) })
+            //ChipGroup(chipList = chipList, onRemove = { chip -> chipList.remove(chip) })
+            ChipGroup(viewModel = chips, onRemove = )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -119,7 +136,7 @@ fun MainUI(viewModel: NewsItemViewModel) {
                 if(newValue.isBlank()) {
                     Toast.makeText(context, "키워드를 입력해주세요.", Toast.LENGTH_SHORT).show()
                 } else {
-                    chipList.add(newValue) // 입력한 값 추가
+                    //chipList.add(newValue) // 입력한 값 추가
                     showDialog.value = false // 다이얼로그 닫기
                     viewModel.fetchData(newValue)
                 }
@@ -134,9 +151,9 @@ fun MainUI(viewModel: NewsItemViewModel) {
 // Chip 그룹
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChipGroup(chipList: List<String>, onRemove: (String) -> Unit) {
+fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
 
-    var selectedChip by remember { mutableStateOf<String?>(null) }
+    //var selectedChip by remember { mutableStateOf<String?>(null) }
 
     FlowRow(
         modifier = Modifier
@@ -146,7 +163,22 @@ fun ChipGroup(chipList: List<String>, onRemove: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp), // 칩 간 간격
         verticalArrangement = Arrangement.spacedBy(8.dp) // 줄 간 간격
     ) {
-        chipList.forEach { chip ->
+        viewModel.chipInfoList?.forEach { (chip, selected) ->
+            AssistChip(
+                onClick = { /*selectedChip = if (selectedChip == chip) null else chip*/ },
+                modifier = Modifier.height(32.dp),
+                label = { Text(chip) },
+                trailingIcon = {
+                    IconButton(onClick = { onRemove(chip) }) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "삭제")
+                    }
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (selected) Color.Blue else Color.LightGray
+                )
+            )
+        }
+/*        chipList.forEach { chip ->
             AssistChip(
                 onClick = { selectedChip = if (selectedChip == chip) null else chip },
                 modifier = Modifier.height(32.dp),
@@ -160,7 +192,7 @@ fun ChipGroup(chipList: List<String>, onRemove: (String) -> Unit) {
                     containerColor = if (selectedChip == chip) Color.Blue else Color.LightGray
                 )
             )
-        }
+        }*/
     }
 }
 
