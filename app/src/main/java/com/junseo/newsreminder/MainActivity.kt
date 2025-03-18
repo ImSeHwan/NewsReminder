@@ -138,8 +138,10 @@ fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewMo
                 if(newValue.isBlank()) {
                     Toast.makeText(context, "키워드를 입력해주세요.", Toast.LENGTH_SHORT).show()
                 } else {
-                    //chipList.add(newValue) // 입력한 값 추가
-                    chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.plus(Pair(newValue, true))
+                    //chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.plus(Pair(newValue, true))
+                    chipsViewModel.chipInfoList = chipsViewModel.chipInfoList
+                        ?.map { (key, _) -> key to false }
+                        ?.plus(Pair(newValue, true))
                     showDialog.value = false // 다이얼로그 닫기
                     newsItemViewModel.fetchData(newValue)
                 }
