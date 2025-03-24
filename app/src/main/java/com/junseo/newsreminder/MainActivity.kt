@@ -1,6 +1,7 @@
 package com.junseo.newsreminder
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -119,7 +120,15 @@ fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewMo
         Column(modifier = Modifier.padding(paddingValues)) {
             // Chip 그룹
             ChipGroup(viewModel = chipsViewModel, onRemove = { chip ->
-                chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.filter { it.first != chip }
+                chipsViewModel.chipInfoList = chipsViewModel.chipInfoList
+                    ?.filter { it.first != chip } // 같은 String 값을 가진 항목 제거
+                    ?.toMutableList()
+                    ?.apply {
+                        if (none { it.second } && isNotEmpty()) {
+                            // 리스트에 true가 없고, 비어있지 않다면 마지막 아이템을 true로 변경
+                            this[lastIndex] = this[lastIndex].first to true
+                        }
+                    }
             })
             //ChipGroup(viewModel = chips, onRemove = )
 
@@ -138,8 +147,9 @@ fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewMo
                 if(newValue.isBlank()) {
                     Toast.makeText(context, "키워드를 입력해주세요.", Toast.LENGTH_SHORT).show()
                 } else {
-                    //chipList.add(newValue) // 입력한 값 추가
-                    chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.plus(Pair(newValue, true))
+                    chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.map { it.first to false }?.toMutableList()?.apply {
+                        add(Pair(newValue, true))
+                    }
                     showDialog.value = false // 다이얼로그 닫기
                     newsItemViewModel.fetchData(newValue)
                 }
@@ -155,9 +165,13 @@ fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewMo
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
+    var selectedChip by remember { mutableStateOf<String?>(null) }
 
     //var selectedChip by remember { mutableStateOf<String?>(null) }
-
+    LaunchedEffect(viewModel.chipInfoList) {
+        selectedChip = viewModel.chipInfoList?.firstOrNull { it.second }?.first
+        Log.d("sehwan", "selectedChip : $selectedChip")
+    }
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -168,7 +182,13 @@ fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
     ) {
         viewModel.chipInfoList?.forEach { (chip, selected) ->
             AssistChip(
-                onClick = { /*selectedChip = if (selectedChip == chip) null else chip*/ },
+                onClick = {
+                    if (!selected) { // 이미 선택된 경우 무시
+                        viewModel.chipInfoList = viewModel.chipInfoList?.map {
+                            it.first to (it.first == chip) // 선택한 항목만 true, 나머지는 false
+                        }
+                    }
+                },
                 modifier = Modifier.height(32.dp),
                 label = { Text(chip) },
                 trailingIcon = {
@@ -177,7 +197,7 @@ fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
                     }
                 },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (selected) Color.Blue else Color.LightGray
+                    containerColor = if (selected) Color.White else Color.LightGray
                 )
             )
         }
