@@ -1,8 +1,11 @@
 package com.junseo.newsreminder.retrofit
 
 import com.junseo.newsreminder.model.NaverNewsResponse
+import javax.inject.Inject
 
-class Repository(private val apiService: ApiService) {
+class Repository @Inject constructor(
+    private val apiService: ApiService
+) {
 
     suspend fun fetchData(endpoint: String, query: Map<String, String> = emptyMap()): Result<Any> {
         return ApiWrapper.safeApiCall { apiService.getRequest(endpoint, query) }

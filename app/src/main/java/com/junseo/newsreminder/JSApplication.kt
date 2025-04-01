@@ -4,7 +4,9 @@ import android.app.Application
 import com.junseo.newsreminder.common.CommonInfo
 import com.junseo.newsreminder.utils.log.LogHelper
 import com.msinfotech.delivery.utils.prefs.SimplePrefs
+import dagger.hilt.android.HiltAndroidApp
 
+@HiltAndroidApp
 class JSApplication: Application() {
 
     lateinit var simplePrefs: SimplePrefs

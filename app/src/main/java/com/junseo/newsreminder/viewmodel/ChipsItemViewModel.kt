@@ -9,9 +9,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import com.junseo.newsreminder.JSApplication
 import com.junseo.newsreminder.common.CommonInfo
+import com.junseo.newsreminder.retrofit.Repository
 import com.msinfotech.delivery.utils.prefs.SimplePrefs
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class ChipsItemViewModel(): ViewModel() {
+@HiltViewModel
+class ChipsItemViewModel @Inject constructor() : ViewModel() {
     var chipInfoList by mutableStateOf<List<Pair<String, Boolean>>?>(null)
 
     /// SharedPreferences에 저장된 데이터를 읽어와 chipInfoList에 설정

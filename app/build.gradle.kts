@@ -1,6 +1,8 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("dagger.hilt.android.plugin") // Hilt 플러그인 적용
+    id("kotlin-kapt")
 }
 
 android {
@@ -9,6 +11,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     defaultConfig {
@@ -43,17 +46,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
-    buildFeatures {
-        compose = true
-    }
+
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.4.5"
     }
     packaging {
         resources {
@@ -79,6 +80,7 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation("androidx.compose.compiler:compiler:1.5.15")
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0") // JSON 변환용 (Gson)
@@ -86,4 +88,19 @@ dependencies {
     // log4j
     implementation("log4j:log4j:1.2.17")
     implementation("de.mindpipe.android:android-logging-log4j:1.0.3")
+
+    // Compose ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
+    // HTML 파싱
+    implementation("org.jsoup:jsoup:1.16.1")
+
+    // iamge loader
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
+    // Hilt 의존성 추가
+    implementation("com.google.dagger:hilt-android:2.44") // Hilt Android 의존성
+    kapt("com.google.dagger:hilt-android-compiler:2.44") // Hilt Android 컴파일러 의존성
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
 }

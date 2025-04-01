@@ -13,5 +13,6 @@ data class NewsItem(
     val originallink: String,
     val link: String,
     val description: String,
-    val pubDate: String
+    val pubDate: String,
+    val imageUrl: String = ""
 )

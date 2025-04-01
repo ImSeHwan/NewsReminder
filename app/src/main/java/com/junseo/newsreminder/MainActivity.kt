@@ -1,28 +1,39 @@
 package com.junseo.newsreminder
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.text.Html
 import android.util.Log
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -41,20 +52,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.junseo.newsreminder.common.CommonInfo
 import com.junseo.newsreminder.dialog.InputDialog
+import com.junseo.newsreminder.model.NaverNewsResponse
+import com.junseo.newsreminder.model.NewsItem
 import com.junseo.newsreminder.ui.theme.NewsReminderTheme
+import com.junseo.newsreminder.utils.log.MLog
 import com.junseo.newsreminder.viewmodel.ChipsItemViewModel
 import com.junseo.newsreminder.viewmodel.NewsItemViewModel
-import com.msinfotech.delivery.utils.prefs.SimplePrefs
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    //private val newsItemViewModel: NewsItemViewModel by viewModels()
     private val chipsItemViewModel: ChipsItemViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,7 +94,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainUI(chipsItemViewModel)
+                    MainUI(/*chipsItemViewModel*/)
                 }
             }
         }
@@ -89,14 +112,12 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewModel = NewsItemViewModel()) {
-    // mutableStateListOf로 상태를 관리하여 리스트가 변경될 때 UI가 갱신되도록 수정
-    //val newsData by viewModel.data.collectAsState()
-    //var newValue by remember { mutableStateOf<String?>(null) }
+fun MainUI(
+    chipsViewModel: ChipsItemViewModel = hiltViewModel(),
+    newsItemViewModel: NewsItemViewModel = hiltViewModel()
+) {
 
-
-    //val chipList = remember { mutableStateListOf<String>() }
-    val itemList = remember { mutableStateListOf<String>() }
+    val newsData by newsItemViewModel.data.collectAsState()
 
     val showDialog = remember { mutableStateOf(false) }
     val inputText = remember { mutableStateOf("") }
@@ -119,7 +140,7 @@ fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewMo
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             // Chip 그룹
-            ChipGroup(viewModel = chipsViewModel, onRemove = { chip ->
+            ChipGroup(onRemove = { chip ->
                 chipsViewModel.chipInfoList = chipsViewModel.chipInfoList
                     ?.filter { it.first != chip } // 같은 String 값을 가진 항목 제거
                     ?.toMutableList()
@@ -130,12 +151,11 @@ fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewMo
                         }
                     }
             })
-            //ChipGroup(viewModel = chips, onRemove = )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // 리스트뷰
-            ItemList(itemList)
+            ItemList(newsResponse = newsData)
         }
     }
 
@@ -164,13 +184,21 @@ fun MainUI(chipsViewModel: ChipsItemViewModel, newsItemViewModel: NewsItemViewMo
 // Chip 그룹
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
+fun ChipGroup(
+    chipsViewModel: ChipsItemViewModel = hiltViewModel(),
+    newsItemViewModel: NewsItemViewModel = hiltViewModel(),
+              onRemove: (String) -> Unit) {
     var selectedChip by remember { mutableStateOf<String?>(null) }
 
     //var selectedChip by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(viewModel.chipInfoList) {
-        selectedChip = viewModel.chipInfoList?.firstOrNull { it.second }?.first
+    LaunchedEffect(chipsViewModel.chipInfoList) {
+        selectedChip = chipsViewModel.chipInfoList?.firstOrNull { it.second }?.first
         Log.d("sehwan", "selectedChip : $selectedChip")
+
+        selectedChip?.let {
+            newsItemViewModel.fetchData(it)
+        }
+
     }
     FlowRow(
         modifier = Modifier
@@ -180,11 +208,11 @@ fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp), // 칩 간 간격
         verticalArrangement = Arrangement.spacedBy(8.dp) // 줄 간 간격
     ) {
-        viewModel.chipInfoList?.forEach { (chip, selected) ->
+        chipsViewModel.chipInfoList?.forEach { (chip, selected) ->
             AssistChip(
                 onClick = {
                     if (!selected) { // 이미 선택된 경우 무시
-                        viewModel.chipInfoList = viewModel.chipInfoList?.map {
+                        chipsViewModel.chipInfoList = chipsViewModel.chipInfoList?.map {
                             it.first to (it.first == chip) // 선택한 항목만 true, 나머지는 false
                         }
                     }
@@ -206,37 +234,83 @@ fun ChipGroup(viewModel: ChipsItemViewModel, onRemove: (String) -> Unit) {
 
 // 리스트뷰
 @Composable
-fun ItemList(items: List<String>) {
+fun ItemList(newsResponse: NaverNewsResponse?) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(items) { item ->
-            ListItem(text = item)
+        newsResponse?.items?.let { items ->
+            items(items, key = { it.title }) { newsItem ->
+                NewsItemView(currentNewsItem = newsItem)
+            }
         }
     }
 }
 
-// 리스트 아이템
 @Composable
-fun ListItem(text: String) {
+fun NewsItemView(currentNewsItem: NewsItem) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = MaterialTheme.shapes.medium
+            .padding(8.dp)
+            .clickable { openWebPage(context, currentNewsItem.link) },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            AsyncImage(
+                model = currentNewsItem.imageUrl,
+                contentDescription = "뉴스 이미지",
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                HtmlText(currentNewsItem.title, maxLines = 1)  // HTML 제목
+                Spacer(modifier = Modifier.height(8.dp))
+                HtmlText(currentNewsItem.description, maxLines = 3) // 최대 3줄로 제한
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = currentNewsItem.pubDate,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
+            }
+        }
     }
+}
+
+@Composable
+fun HtmlText(html: String, maxLines: Int = Int.MAX_VALUE) {
+    AndroidView(factory = { context ->
+        TextView(context).apply {
+            text = Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY)
+            setMaxLines(maxLines) // 최대 줄 수 제한
+            ellipsize = android.text.TextUtils.TruncateAt.END // 생략 부호 처리
+        }
+    })
+}
+
+// ✅ Intent 실행 함수 - Composable 함수 외부로 분리
+fun openWebPage(context: Context, url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+    context.startActivity(intent)
 }
 
 @Preview(showBackground = true)
 @Composable
 fun Preview() {
-    val mockViewModel = NewsItemViewModel() // ✅ 직접 ViewModel 인스턴스 생성
+    //val mockViewModel = NewsItemViewModel() // ✅ 직접 ViewModel 인스턴스 생성
 
     NewsReminderTheme {
-        //MainUI(viewModel = mockViewModel)
+        MainUI()
     }
 }
