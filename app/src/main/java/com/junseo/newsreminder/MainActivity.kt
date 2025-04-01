@@ -83,8 +83,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val savedData = JSApplication.INSTANCE.simplePrefs.getList(CommonInfo.PREF_SEARCH_LIST_KEY)
-        chipsItemViewModel.loadChipInfoFromPreferences(savedData)
+        //val savedData = JSApplication.INSTANCE.simplePrefs.getList(CommonInfo.PREF_SEARCH_LIST_KEY)
+        //chipsItemViewModel.loadChipInfoFromPreferences(savedData)
 
         setContent {
             //val viewModel: NewsItemViewModel = viewModel()
@@ -116,6 +116,14 @@ fun MainUI(
     chipsViewModel: ChipsItemViewModel = hiltViewModel(),
     newsItemViewModel: NewsItemViewModel = hiltViewModel()
 ) {
+
+    // SharedPreferences 데이터 불러오기
+    val savedData = JSApplication.INSTANCE.simplePrefs.getList(CommonInfo.PREF_SEARCH_LIST_KEY)
+
+    // 데이터 로딩 (최초 한 번만)
+    LaunchedEffect(Unit) {
+        chipsViewModel.loadChipInfoFromPreferences(savedData)
+    }
 
     val newsData by newsItemViewModel.data.collectAsState()
 
@@ -253,7 +261,10 @@ fun NewsItemView(currentNewsItem: NewsItem) {
             .padding(8.dp)
             .clickable { openWebPage(context, currentNewsItem.link) },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+        containerColor = Color.White
+                )
     ) {
         Row(
             modifier = Modifier
