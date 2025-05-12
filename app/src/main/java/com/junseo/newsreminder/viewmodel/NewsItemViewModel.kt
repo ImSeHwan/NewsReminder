@@ -23,38 +23,53 @@ class NewsItemViewModel @Inject constructor(
     private val _data = MutableStateFlow<NaverNewsResponse?>(null)
     val data: StateFlow<NaverNewsResponse?> = _data
 
+    private val imageCache = mutableMapOf<String, String>()
+
     fun fetchData(keyword: String) {
         viewModelScope.launch {
             try {
-                //val apiService = ApiClient.retrofit.create(ApiService::class.java)
-                //val repository = Repository(apiService)
                 val result = repository.patchNewsList(keyword)
 
                 result.onSuccess { newsList ->
-                    // 이미지 URL 추출 후 데이터를 업데이트
-                    val updatedItems = newsList.items.map { item ->
-                        val imageUrl = fetchImageUrlFromLink(item.link) ?: ""
-                        item.copy(imageUrl = imageUrl)  // 이미지 URL을 새로운 필드에 추가
-                    }
+                    // 1. 먼저 빈 imageUrl로 UI에 보여주기
+                    _data.value = newsList.copy(
+                        items = newsList.items.map { it.copy(imageUrl = "") }
+                    )
 
-                    _data.value = newsList.copy(items = updatedItems)
+                    // 2. 각 아이템에 대해 비동기적으로 이미지 요청
+                    newsList.items.forEachIndexed { index, item ->
+                        launch(Dispatchers.IO) {
+                            val imageUrl = fetchImageUrlFromLink(item.link) ?: ""
+
+                            // 3. 기존 데이터에서 해당 아이템만 업데이트
+                            val currentItems = _data.value?.items?.toMutableList() ?: return@launch
+                            currentItems[index] = currentItems[index].copy(imageUrl = imageUrl)
+                            _data.value = _data.value?.copy(items = currentItems)
+                        }
+                    }
                 }.onFailure { error ->
                     Log.e("NewsItemViewModel", "error : $error")
                 }
 
             } catch (e: Exception) {
-                //_data.value = "API 호출 실패"
                 Log.e("NewsItemViewModel", "e : $e")
             }
         }
     }
 
     private suspend fun fetchImageUrlFromLink(link: String): String? {
+        imageCache[link]?.let { return it }
+
         return try {
             val document = withContext(Dispatchers.IO) {
-                Jsoup.connect(link).get()
+                Jsoup.connect(link)
+                    .timeout(3000)
+                    .userAgent("Mozilla")
+                    .get()
             }
-            document.select("meta[property=og:image]").attr("content") // og:image 메타 태그
+            val url = document.select("meta[property=og:image]").attr("content")
+            imageCache[link] = url
+            url
         } catch (e: Exception) {
             Log.e("ImageFetch", "Failed to fetch image", e)
             null
